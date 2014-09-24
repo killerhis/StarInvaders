@@ -9,6 +9,7 @@
 #import "GameScene.h"
 #import <CoreMotion/CoreMotion.h>
 #import <AVFoundation/AVFoundation.h>
+#import "GAIDictionaryBuilder.h"
 
 #pragma mark - Custom Type Definitions
 
@@ -99,15 +100,6 @@ static const u_int32_t kInvaderFiredBulletCategory = 0x1 << 4;
 {
     if (!self.contentCreated) {
         
-        // create background music
-        /*self.backgroundMusic = [[SKNode alloc] init];
-        self.backgroundMusic.name = @"backgroundMusic";
-        
-        SKAction *playBackgroundMusic = [SKAction playSoundFileNamed:@"music.caf" waitForCompletion:YES];
-        
-        [self.backgroundMusic runAction:[SKAction repeatActionForever:playBackgroundMusic]];
-        [self addChild:self.backgroundMusic];*/
-        
         [self createContent];
         self.contentCreated = YES;
         self.motionManager = [[CMMotionManager alloc] init];
@@ -120,11 +112,6 @@ static const u_int32_t kInvaderFiredBulletCategory = 0x1 << 4;
         self.physicsWorld.contactDelegate = self;
         
         self.physicsBody = [SKPhysicsBody bodyWithEdgeLoopFromRect:self.frame];
-        
-        //NSInteger playCount = 0;
-        //NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
-        //[defaults setInteger:playCount forKey:@"playCount"];
-        //[defaults synchronize];
         
         //For retrieving
         
@@ -139,9 +126,13 @@ static const u_int32_t kInvaderFiredBulletCategory = 0x1 << 4;
             [self enumerateChildNodesWithName:kScoreHudName usingBlock:^(SKNode *node, BOOL *stop) {
                 
                 node.position = CGPointMake(self.size.width/2, self.size.height+node.frame.size.height*2);
-                //[node runAction:[SKAction moveToY:self.size.height - (20 + self.scoreLabel.frame.size.height/2) - self.size.height/16 duration:0.5]];
                 
             }];
+        } else {
+            // GA
+            id<GAITracker> tracker = [[GAI sharedInstance] defaultTracker];
+            [tracker set:kGAIScreenName value:@"PlayGameScene"];
+            [tracker send:[[GAIDictionaryBuilder createAppView] build]];
         }
         
         playCount++;
@@ -159,10 +150,6 @@ static const u_int32_t kInvaderFiredBulletCategory = 0x1 << 4;
     self.timePerShoot = 1.0;
     self.timeOfLastBullet = 0.0;
     self.allowSpeedMove = NO;
-    
-    /*SKSpriteNode* invader = [SKSpriteNode spriteNodeWithImageNamed:@"InvaderA_00.png"];
-    invader.position = CGPointMake(self.size.width/2, self.size.height/2);
-    [self addChild:invader];*/
     
     self.physicsBody.categoryBitMask = kSceneEdgeCategory;
     
@@ -286,17 +273,6 @@ static const u_int32_t kInvaderFiredBulletCategory = 0x1 << 4;
     
     [self addChild:self.scoreLabel];
     
-    /*SKLabelNode *healthLabel = [SKLabelNode labelNodeWithFontNamed:@"Courier"];
-    
-    healthLabel.name = kHealthHudName;
-    healthLabel.fontSize = 15;
-    
-    healthLabel.fontColor = [SKColor redColor];
-    healthLabel.text = [NSString stringWithFormat:@"Health: %.1f%%", self.shipHealth * 100.0f];
-    
-    healthLabel.position = CGPointMake(self.size.width - healthLabel.frame.size.width/2 - 20, self.size.height - (20 + healthLabel.frame.size.height/2));
-    [self addChild:healthLabel];*/
-    
 }
 
 - (SKNode *)makeBulletOfType:(BulletType)bulletType
@@ -388,15 +364,8 @@ static const u_int32_t kInvaderFiredBulletCategory = 0x1 << 4;
     SKSpriteNode *ship = (SKSpriteNode *)[self childNodeWithName:kShipName];
     CMAccelerometerData *data = self.motionManager.accelerometerData;
     
-    //if (fabs(data.acceleration.x) > 0.2 /*&& fabs(data.acceleration.x) < 1*/) {
     ship.physicsBody.velocity = CGVectorMake(1000*data.acceleration.x, 0);
     ship.zRotation = 0;
-            //[ship.physicsBody applyForce:CGVectorMake(40.0*data.acceleration.x, 0)];
-    /*} else if (fabs(data.acceleration.x) >= 1) {
-        
-        int direction = data.acceleration.x / fabs(data.acceleration.x);
-        ship.physicsBody.velocity = CGVectorMake(40*direction, 0);
-    }*/
 }
 
 - (void)processUserTapsForUpdate:(NSTimeInterval)currentTime
@@ -407,16 +376,11 @@ static const u_int32_t kInvaderFiredBulletCategory = 0x1 << 4;
             [self fireShipBullets];
             [self.tapQueue removeObject:tapCount];
         }
-        
-        //[self.tapQueue removeObject:tapCount];
     }
 }
 
 - (void)fireInvaderBulletsForUpdate:(NSTimeInterval)currentTime
 {
-    //SKNode *existingBullet = [self childNodeWithName:kInvaderFiredBulletName];
-    
-    //if (!existingBullet) {
     
     if (currentTime - self.timeOfLastBullet > self.timePerShoot && !self.gameEnding) {
         
@@ -426,7 +390,7 @@ static const u_int32_t kInvaderFiredBulletCategory = 0x1 << 4;
         }];
         
         if ([allInvaders count] > 0) {
-            NSUInteger allInvadersInxed = arc4random_uniform([allInvaders count]);
+            NSUInteger allInvadersInxed = arc4random_uniform((u_int32_t)[allInvaders count]);
             SKNode *invader = [allInvaders objectAtIndex:allInvadersInxed];
             
             SKNode *bullet = [self makeBulletOfType:InvaderFiredBulletType];
@@ -494,23 +458,6 @@ static const u_int32_t kInvaderFiredBulletCategory = 0x1 << 4;
         self.invaderMovementDirection = proposedMovementDirection;
     }
 }
-/*
-- (void)adjustInvaderMovementToTimePerMove:(NSTimeInterval)newTimePerMove
-{
-    if (newTimePerMove <= 0) {
-        return;
-    }
-    
-    if (self.timePerMove > 0.1)
-    {
-        double ratio = self.timePerMove / newTimePerMove;
-        self.timePerMove = newTimePerMove;
-        
-        [self enumerateChildNodesWithName:kInvaderName usingBlock:^(SKNode *node, BOOL *stop) {
-            node.speed = node.speed * ratio;
-        }];
-    }
-}*/
 
 - (void)adjustInvaderMovementToTimePerMove
 {
@@ -531,20 +478,21 @@ static const u_int32_t kInvaderFiredBulletCategory = 0x1 << 4;
 
 - (void)fireBullet:(SKNode *)bullet toDestination:(CGPoint)destination withDuration:(NSTimeInterval)duration soundFileName:(NSString *)soundFileName
 {
-    SKAction *bulletAction = [SKAction sequence:@[[SKAction moveTo:destination duration:duration], [SKAction waitForDuration:3.0/60.0], [SKAction removeFromParent]]];
-    
+    //SKAction *bulletAction = [SKAction sequence:@[[SKAction moveTo:destination duration:duration], [SKAction waitForDuration:3.0/60.0], [SKAction removeFromParent]]];
+    SKAction *bulletAction = [SKAction sequence:@[[SKAction moveTo:destination duration:duration], [SKAction waitForDuration:3.0/60.0]]];
     SKAction *soundAction = [SKAction playSoundFileNamed:soundFileName waitForCompletion:YES];
     
-    [bullet runAction:[SKAction group:@[bulletAction, soundAction]]];
-     
-     [self addChild:bullet];
+    //[bullet runAction:[SKAction group:@[bulletAction, soundAction]]];
+    [bullet runAction:[SKAction group:@[bulletAction, soundAction]] completion:^{
+        [bullet removeFromParent];
+        [self removeFromParent];
+    }];
+    
+    [self addChild:bullet];
 }
 
 - (void)fireShipBullets
 {
-    //SKNode *existingBullet = [self childNodeWithName:kShipFiredBulletName];
-    
-    //if (!existingBullet) {
         SKNode *ship = [self childNodeWithName:kShipName];
         SKNode *bullet = [self makeBulletOfType:ShipFiredBulletType];
         
@@ -552,34 +500,12 @@ static const u_int32_t kInvaderFiredBulletCategory = 0x1 << 4;
         CGPoint bulletDestination = CGPointMake(ship.position.x, self.frame.size.height + bullet.frame.size.height/2);
         
         [self fireBullet:bullet toDestination:bulletDestination withDuration:1.0 soundFileName:@"ShipBullet.caf"];
-    //}
 }
 
 #pragma mark - User Tap Helpers
 
-- (void)touchesBegan:(NSSet *)touches withEvent:(UIEvent *)event
-{
-    
-}
-
-- (void)touchesMoved:(NSSet *)touches withEvent:(UIEvent *)event
-{
-    
-}
-
-- (void)touchesCancelled:(NSSet *)touches withEvent:(UIEvent *)event
-{
-    
-}
-
 - (void)touchesEnded:(NSSet *)touches withEvent:(UIEvent *)event
 {
-    //UITouch *touch = [touches anyObject];
-    //if (touch.tapCount ==1) {
-    //if (touch.tapCount >= 1) {
-    //    [self.tapQueue addObject:@1];
-    //}
-    
     UITouch *touch = [touches anyObject];
     CGPoint location = [touch locationInNode:self];
     SKNode *node = [self nodeAtPoint:location];
@@ -621,7 +547,7 @@ static const u_int32_t kInvaderFiredBulletCategory = 0x1 << 4;
 {
     self.score += points;
     SKLabelNode *score = (SKLabelNode *)[self childNodeWithName:kScoreHudName];
-    score.text = [NSString stringWithFormat:@"%i", self.score];
+    score.text = [NSString stringWithFormat:@"%i", (int)self.score];
 }
 
 - (void)adjustShipHealthBy:(CGFloat)healthAdjustment
@@ -671,8 +597,12 @@ static const u_int32_t kInvaderFiredBulletCategory = 0x1 << 4;
     } else if ([nodeNames containsObject:kInvaderName] && [nodeNames containsObject:kShipFiredBulletName]) {
         
         [self runAction:[SKAction playSoundFileNamed:@"InvaderHit.caf" waitForCompletion:NO]];
+        //[contact.bodyA.node removeFromParent];
+        //[contact.bodyB.node removeFromParent];
+        
         [contact.bodyA.node removeFromParent];
         [contact.bodyB.node removeFromParent];
+        [self removeFromParent];
         
         [self adjustScoreBy:1];
         self.allowSpeedMove = YES;
@@ -711,14 +641,6 @@ static const u_int32_t kInvaderFiredBulletCategory = 0x1 << 4;
         
         [self.motionManager stopAccelerometerUpdates];
         
-        
-        // save best score in NSDefaults
-        
-        //if (![self.defaults integerForKey:@"playCount"]) {
-        //    NSLog(@"first time no best score");
-        //    [self.defaults setInteger:self.score forKey:@"bestScore"];
-        //}
-        
         NSInteger bestScore = [self.defaults integerForKey:@"bestScore"];
         
         if (self.score > bestScore) {
@@ -735,26 +657,6 @@ static const u_int32_t kInvaderFiredBulletCategory = 0x1 << 4;
             
             [node runAction:[SKAction moveToY:self.size.height+100 duration:0.5]];
         }];
-
-
-        //self.view.scene.speed = 0;
-        
-        //GameOverScene *gameOverScene = [[GameOverScene alloc] initWithSize:self.size];
-        //[self.view presentScene:gameOverScene transition:[SKTransition doorsOpenHorizontalWithDuration:1.0]];
-        
-        /*SKLabelNode* gameOverLabel = [SKLabelNode labelNodeWithFontNamed:@"Courier"];
-        gameOverLabel.fontSize = 50;
-        gameOverLabel.fontColor = [SKColor whiteColor];
-        gameOverLabel.text = @"Game Over!";
-        gameOverLabel.position = CGPointMake(self.size.width/2, 2.0 / 3.0 * self.size.height);
-        [self addChild:gameOverLabel];
-        
-        SKLabelNode* tapLabel = [SKLabelNode labelNodeWithFontNamed:@"Courier"];
-        tapLabel.fontSize = 25;
-        tapLabel.fontColor = [SKColor whiteColor];
-        tapLabel.text = @"(Tap to Play Again)";
-        tapLabel.position = CGPointMake(self.size.width/2, gameOverLabel.frame.origin.y - gameOverLabel.frame.size.height - 40);
-        [self addChild:tapLabel];*/
     }
 }
 
@@ -762,6 +664,11 @@ static const u_int32_t kInvaderFiredBulletCategory = 0x1 << 4;
 
 - (void)startGameScreen
 {
+    // GA
+    id<GAITracker> tracker = [[GAI sharedInstance] defaultTracker];
+    [tracker set:kGAIScreenName value:@"StartGameScene"];
+    [tracker send:[[GAIDictionaryBuilder createAppView] build]];
+    
     SKNode *startGameScreen = [[SKNode alloc] init];//
     
     SKLabelNode* gameOverLabel = [SKLabelNode labelNodeWithFontNamed:@"MineCrafter 3"];
@@ -798,6 +705,11 @@ static const u_int32_t kInvaderFiredBulletCategory = 0x1 << 4;
 
 - (void)restartGameScreen
 {
+    // GA
+    id<GAITracker> tracker = [[GAI sharedInstance] defaultTracker];
+    [tracker set:kGAIScreenName value:@"GameOverScene"];
+    [tracker send:[[GAIDictionaryBuilder createAppView] build]];
+    
     restartGameScreenNode = [[SKNode alloc] init];
     
     SKLabelNode* gameOverLabel = [SKLabelNode labelNodeWithFontNamed:@"MineCrafter 3"];
@@ -806,13 +718,6 @@ static const u_int32_t kInvaderFiredBulletCategory = 0x1 << 4;
     gameOverLabel.text = @"game over";
     gameOverLabel.position = CGPointMake(self.size.width/2, self.size.height - self.size.height/8);
     [restartGameScreenNode addChild:gameOverLabel];
-    
-    /*SKLabelNode* tapLabel = [SKLabelNode labelNodeWithFontNamed:@"MineCrafter 3"];
-    tapLabel.fontSize = 25;
-    tapLabel.fontColor = [SKColor whiteColor];
-    tapLabel.text = @"(Tap to Play Again)";
-    tapLabel.position = CGPointMake(self.size.width/2, gameOverLabel.frame.origin.y - gameOverLabel.frame.size.height - 40);
-    [restartGameScreenNode addChild:tapLabel];*/
     
     SKLabelNode* bestScoreLabel = [SKLabelNode labelNodeWithFontNamed:@"MineCrafter 3"];
     bestScoreLabel.fontSize = 15;
@@ -825,7 +730,7 @@ static const u_int32_t kInvaderFiredBulletCategory = 0x1 << 4;
     SKLabelNode* bestScoreValueLabel = [SKLabelNode labelNodeWithFontNamed:@"MineCrafter 3"];
     bestScoreValueLabel.fontSize = 30;
     bestScoreValueLabel.fontColor = [SKColor whiteColor];
-    bestScoreValueLabel.text = [NSString stringWithFormat:@"%i", [self.defaults integerForKey:@"bestScore"]];
+    bestScoreValueLabel.text = [NSString stringWithFormat:@"%i", (int)[self.defaults integerForKey:@"bestScore"]];
     bestScoreValueLabel.position = CGPointMake(self.size.width/2, gameOverLabel.frame.origin.y - gameOverLabel.frame.size.height - 80);
     bestScoreValueLabel.zPosition = 20;
     [restartGameScreenNode addChild:bestScoreValueLabel];
@@ -841,7 +746,7 @@ static const u_int32_t kInvaderFiredBulletCategory = 0x1 << 4;
     SKLabelNode* scoreValueLabel = [SKLabelNode labelNodeWithFontNamed:@"MineCrafter 3"];
     scoreValueLabel.fontSize = 20;
     scoreValueLabel.fontColor = [SKColor whiteColor];
-    scoreValueLabel.text = [NSString stringWithFormat:@"%i", self.score];
+    scoreValueLabel.text = [NSString stringWithFormat:@"%i", (int)self.score];
     scoreValueLabel.position = CGPointMake(self.size.width/2, gameOverLabel.frame.origin.y - gameOverLabel.frame.size.height - 190);
     scoreValueLabel.zPosition = 20;
     [restartGameScreenNode addChild:scoreValueLabel];
@@ -851,14 +756,12 @@ static const u_int32_t kInvaderFiredBulletCategory = 0x1 << 4;
     scoreBackground.zPosition = 10;
     [restartGameScreenNode addChild:scoreBackground];
     
-    //SKSpriteNode *playButtonNode = [SKSpriteNode spriteNodeWithColor:[SKColor whiteColor] size:CGSizeMake(100, 100)];
     SKTexture *playButtonTexture = [SKTexture textureWithImageNamed:@"play_button.png"];
     playButtonTexture.filteringMode = SKTextureFilteringNearest;
     SKSpriteNode *playButtonNode = [SKSpriteNode spriteNodeWithTexture:playButtonTexture size:CGSizeMake(playButtonTexture.size.width*3, playButtonTexture.size.height*3)];
     playButtonNode.position = CGPointMake(self.size.width/2, playButtonNode.size.height/2 + self.size.height/16);
     playButtonNode.name = @"playButtonNode";
     [restartGameScreenNode addChild:playButtonNode];
-    
     
     restartGameScreenNode.position = CGPointMake(0, self.size.height);
     

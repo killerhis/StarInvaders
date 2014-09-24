@@ -19,9 +19,12 @@
     [defaults setInteger:playCount forKey:@"playCount"];
     [defaults synchronize];
     
+    // GA Setup
+    [GAI sharedInstance].trackUncaughtExceptions = YES;
+    [[GAI sharedInstance].logger setLogLevel:kGAILogLevelVerbose];
+    [GAI sharedInstance].dispatchInterval = 20;
+    [[GAI sharedInstance] trackerWithTrackingId:@"UA-54104285-7"];
     
-    //For retrieving
-    //NSMutableArray *resultArray = [NSMutableArray arrayWithArray:[defaults objectForKey:@"numberArray"]];
     return YES;
 }
 							
